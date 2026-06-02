@@ -1,7 +1,7 @@
 import axios from 'axios';
 
 const api = axios.create({
-  baseURL: 'http://localhost:5001/api',
+  baseURL: 'https://face-rec-1zxv.onrender.com/api',
 });
 
 // Add a request interceptor to add the JWT token to requests
