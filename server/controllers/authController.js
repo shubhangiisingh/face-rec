@@ -38,14 +38,15 @@ const registerUser = async (req, res) => {
     });
 
     if (user) {
-      // Register face in Python service using the MongoDB User ID
+      // Register face in Python service and get the embedding vector back
       try {
-        await faceService.registerFace(user._id.toString(), images);
+        const result = await faceService.registerFace(images);
         
-        // Update user to indicate face is registered
+        // Update user to indicate face is registered and store embedding
+        user.faceEmbedding = result.embedding;
         user.hasFaceRegistered = true;
         await user.save();
-
+        
         res.status(201).json({
           _id: user.id,
           name: user.name,
@@ -110,8 +111,12 @@ const verifyFaceLogin = async (req, res) => {
       return res.status(404).json({ message: 'User not found' });
     }
 
+    if (!user.faceEmbedding || user.faceEmbedding.length === 0) {
+      return res.status(400).json({ message: 'No face biometric registered for this user' });
+    }
+
     // Call Python microservice to verify face
-    const result = await faceService.verifyFace(userId, image);
+    const result = await faceService.verifyFace(user.faceEmbedding, image);
 
     if (result.match) {
       // Face matched successfully, issue JWT token

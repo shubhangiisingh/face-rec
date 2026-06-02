@@ -18,11 +18,16 @@ app.use(cookieParser());
 app.use('/api/auth', authRoutes);
 
 // Database Connection
+console.log('Connecting to MongoDB...');
 mongoose
   .connect(process.env.MONGODB_URI || 'mongodb://localhost:27017/face_auth')
-  .then(() => console.log('MongoDB Connected'))
-  .catch((err) => console.log('MongoDB Connection Error: ', err));
-
-// Start Server
-const PORT = process.env.PORT || 5001;
-app.listen(PORT, () => console.log(`Server running on port ${PORT}`));
+  .then(() => {
+    console.log('MongoDB Connected');
+    // Start Server
+    const PORT = process.env.PORT || 5001;
+    app.listen(PORT, () => console.log(`Server running on port ${PORT}`));
+  })
+  .catch((err) => {
+    console.error('MongoDB Connection Error: ', err);
+    process.exit(1);
+  });

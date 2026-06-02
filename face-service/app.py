@@ -3,27 +3,38 @@ import numpy as np
 from flask import Flask, request, jsonify
 from flask_cors import CORS
 from face_utils import base64_to_image, get_face_encoding, compare_faces
+from functools import wraps
 
 app = Flask(__name__)
 # Allow CORS for all domains for development purposes
 CORS(app)
 
-ENCODINGS_DIR = "encodings"
-os.makedirs(ENCODINGS_DIR, exist_ok=True)
+INTERNAL_API_KEY = os.environ.get("INTERNAL_API_KEY", "dev_secret_key")
+
+def require_api_key(f):
+    @wraps(f)
+    def decorated(*args, **kwargs):
+        api_key = request.headers.get("X-API-Key")
+        if not api_key or api_key != INTERNAL_API_KEY:
+            return jsonify({"error": "Unauthorized: Invalid or missing API key"}), 401
+        return f(*args, **kwargs)
+    return decorated
+
 
 @app.route('/register_face', methods=['POST'])
+@require_api_key
 def register_face():
     """
     Endpoint to register a user's face. 
-    Expects JSON: { "userId": "...", "images": ["base64_str1", "base64_str2", ...] }
+    Expects JSON: { "images": ["base64_str1", "base64_str2", ...] }
+    Returns JSON: { "embedding": [...], "status": "success" }
     """
     try:
         data = request.json
-        user_id = data.get('userId')
         images_base64 = data.get('images', [])
 
-        if not user_id or not images_base64:
-            return jsonify({"error": "Missing userId or images"}), 400
+        if not images_base64:
+            return jsonify({"error": "Missing images"}), 400
 
         encodings = []
         for idx, b64_img in enumerate(images_base64):
@@ -40,12 +51,12 @@ def register_face():
 
         # Average the encodings for a more robust profile
         avg_encoding = np.mean(encodings, axis=0)
-        
-        # Save encoding to disk as a numpy array
-        filepath = os.path.join(ENCODINGS_DIR, f"{user_id}.npy")
-        np.save(filepath, avg_encoding)
 
-        return jsonify({"message": "Face registered successfully", "status": "success"}), 200
+        # Return embedding array as a standard JSON list
+        return jsonify({
+            "embedding": avg_encoding.tolist(),
+            "status": "success"
+        }), 200
 
     except Exception as e:
         print(f"Error in register_face: {e}")
@@ -53,25 +64,22 @@ def register_face():
 
 
 @app.route('/verify_face', methods=['POST'])
+@require_api_key
 def verify_face():
     """
     Endpoint to verify a user's face for login.
-    Expects JSON: { "userId": "...", "image": "base64_str" }
+    Expects JSON: { "knownEmbedding": [...], "image": "base64_str" }
     """
     try:
         data = request.json
-        user_id = data.get('userId')
+        known_encoding_list = data.get('knownEmbedding')
         image_base64 = data.get('image')
 
-        if not user_id or not image_base64:
-            return jsonify({"error": "Missing userId or image"}), 400
+        if not known_encoding_list or not image_base64:
+            return jsonify({"error": "Missing knownEmbedding or image"}), 400
 
-        filepath = os.path.join(ENCODINGS_DIR, f"{user_id}.npy")
-        if not os.path.exists(filepath):
-            return jsonify({"error": "Face not registered for this user"}), 404
-
-        # Load stored encoding
-        known_encoding = np.load(filepath)
+        # Convert list back to numpy array
+        known_encoding = np.array(known_encoding_list)
 
         # Process new image
         img = base64_to_image(image_base64)
