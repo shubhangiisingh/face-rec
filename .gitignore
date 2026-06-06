@@ -8,12 +8,9 @@ env/
 
 # Environment files (very important for security)
 .env
-.env.local
-.env.development.local
-.env.test.local
-.env.production.local
+.env.*
 **/.env
-**/.env.local
+**/.env.*
 
 # Build outputs
 dist/
