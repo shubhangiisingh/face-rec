@@ -1,23 +1,19 @@
-FROM python:3.9-slim
+FROM python:3.10-slim
 
-# Install system dependencies for OpenCV and other C++ packages
+# Install system dependencies for OpenCV
 RUN apt-get update && apt-get install -y \
-    libgl1-mesa-glx \
+    libgl1 \
     libglib2.0-0 \
     && rm -rf /var/lib/apt/lists/*
 
 WORKDIR /app
 
-# Copy dependencies first for caching benefits
 COPY requirements.txt .
 
-# Install dependencies
 RUN pip install --no-cache-dir -r requirements.txt
 
-# Copy application files
 COPY . .
 
 EXPOSE 5005
 
-# Run the Flask app
-CMD ["python", "app.py"]
+CMD ["gunicorn", "--bind", "0.0.0.0:5005", "app:app"]
