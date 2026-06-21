@@ -2,7 +2,7 @@ const axios = require('axios');
 
 // Using axios to communicate with the Flask Python microservice
 const registerFace = async (images) => {
-  const FLASK_URL = process.env.FLASK_SERVICE_URL || 'https://face-rec-1zxv.onrender.com';
+  const FLASK_URL = process.env.FLASK_SERVICE_URL;
   console.log(`Sending face registration to FLASK_URL: ${FLASK_URL}`);
   try {
     const response = await axios.post(
@@ -22,7 +22,7 @@ const registerFace = async (images) => {
 };
 
 const verifyFace = async (faceEmbedding, image) => {
-  const FLASK_URL = process.env.FLASK_SERVICE_URL || 'https://face-rec-1zxv.onrender.com';
+  const FLASK_URL = process.env.FLASK_SERVICE_URL ;
   try {
     const response = await axios.post(
       `${FLASK_URL}/verify_face`,
